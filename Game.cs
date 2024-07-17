@@ -36,11 +36,11 @@ namespace MineSweeper
             while (status == GameStatus.Continue)
             {
                 _consoleUtility.CleanConsole();
-                ShowArea();
+                DisplayArea();
                 Move();
                 CheckGameStatus();
             }
-            ShowArea();
+            DisplayArea();
             EndGame();
         }
         void CheckGameStatus()
@@ -66,7 +66,7 @@ namespace MineSweeper
                         }
             }
         }
-        private void ShowArea()
+        private void DisplayArea()
         {
             StringBuilder stringBuilder = new("  |");
             for (int i = 1; i <= areaWidth; i++)
