@@ -1,114 +1,131 @@
-﻿using System.Text;
+﻿using MineSweeper.ConsoleInteractor.Interface;
+using System.Text;
 
 namespace MineSweeper
 {
     public class Game
     {
-        int x; int y;
+        readonly IConsoleUtility _consoleUtility;
+        readonly IConsoleReader _consoleReader;
+        readonly IConsoleWriter _consoleWriter;
         GameStatus status;
-        readonly bool[,] unCovered;
+
+        int x; int y;
+        readonly int areaWidth;
+        readonly int areaHeight;
+        readonly bool[,] unCoveredField;
         readonly Area area;
-        public Game(int size, int mines)
+        public Game(int size, int mines,
+            IConsoleUtility consoleUtility,
+            IConsoleReader consoleReader, IConsoleWriter
+            consoleWriter)
         {
+            _consoleUtility = consoleUtility;
+            _consoleReader = consoleReader;
+            _consoleWriter = consoleWriter;
+
             status = GameStatus.Continue;
             area = new Area(size, size, mines);
-            unCovered = new bool[size, size];
-            Console.CursorVisible = false;
+            areaWidth = area.field.GetLength(0);
+            areaHeight = area.field.GetLength(1);
+            unCoveredField = new bool[size, size];
+            _consoleUtility.SetCursorVisible(false);
         }
         public void Start()
         {
             while (status == GameStatus.Continue)
             {
-                Console.Clear();
+                _consoleUtility.CleanConsole();
                 ShowArea();
                 Move();
-                Check();
+                CheckGameStatus();
             }
             ShowArea();
             EndGame();
         }
-        void Check()
+        void CheckGameStatus()
         {
             if (area[y, x] == -1)
             {
-                for (int i = 0; i < area.field.GetLength(0); i++)
-                    for (int j = 0; j < area.field.GetLength(1); j++)
+                for (int i = 0; i < areaWidth; i++)
+                    for (int j = 0; j < areaHeight; j++)
                         if (area[i, j] == -1)
-                            unCovered[i, j] = true;
+                            unCoveredField[i, j] = true;
                 status = GameStatus.Lose;
             }
             else
             {
                 status = GameStatus.Win;
                 UnCover(y, x);
-                for (int i = 0; i < area.field.GetLength(0); i++)
-                    for (int j = 0; j < area.field.GetLength(1); j++)
-                        if (area[i, j] >= 0 && !unCovered[i, j])
+                for (int i = 0; i < areaWidth; i++)
+                    for (int j = 0; j < areaHeight; j++)
+                        if (area[i, j] >= 0 && !unCoveredField[i, j])
                         {
                             status = GameStatus.Continue;
                             return;
                         }
             }
         }
-        public void ShowArea()
+        private void ShowArea()
         {
-            StringBuilder stringBuilder = new StringBuilder("  |");
-            for (int i = 1; i <= area.field.GetLength(0); i++)
+            StringBuilder stringBuilder = new("  |");
+            for (int i = 1; i <= areaWidth; i++)
             {
-                stringBuilder.Append( " " + i.ToString().PadRight(2));
+                stringBuilder.Append(" " + i.ToString().PadRight(2));
             }
-            stringBuilder.Append("|");
-            Console.WriteLine(stringBuilder.ToString());
-            Console.WriteLine("--+-".PadRight(area.field.GetLength(0) * 3 + 3, '-') + "|--");
-            for (int i = 0; i < area.field.GetLength(0); i++)
+            stringBuilder.Append('|');
+            _consoleWriter.PrintMessageLine(stringBuilder.ToString());
+            _consoleWriter.PrintMessageLine("--+-".PadRight(areaWidth * 3 + 3, '-') + "|--");
+            for (int i = 0; i < areaWidth; i++)
             {
-                Console.Write((i + 1).ToString().PadLeft(2) + "|");
-                for (int j = 0; j < area.field.GetLength(1); j++)
+                _consoleWriter.PrintMessage((i + 1).ToString().PadLeft(2) + "|");
+                for (int j = 0; j < areaHeight; j++)
                 {
-                    if (unCovered[i, j])
+                    if (unCoveredField[i, j])
                     {
                         if (area[i, j] == 0)
-                            Console.Write("   ");
+                            _consoleWriter.PrintMessage("   ");
                         else if (area[i, j] > 0)
                             CollorChar(area[i, j].ToString(), ConsoleColor.Blue);
                         else
                             CollorChar("*", ConsoleColor.Red);
                     }
                     else
-                        Console.Write(" # ");
+                        _consoleWriter.PrintMessage(" # ");
 
                 }
-                Console.Write("|" + (i + 1).ToString().PadLeft(2));
-                Console.WriteLine();
+                _consoleWriter.PrintMessage("|" + (i + 1).ToString().PadLeft(2));
+                _consoleWriter.PrintNewLine();
             }
-            Console.WriteLine("--+-".PadRight(area.field.GetLength(0) * 3 + 3, '-') + "|--");
-            Console.WriteLine(stringBuilder.ToString());
+            _consoleWriter.PrintMessageLine("--+-".PadRight(areaWidth * 3 + 3, '-') + "|--");
+            _consoleWriter.PrintMessageLine(stringBuilder.ToString());
         }
 
-        void CollorChar(string letter, ConsoleColor color)
+        private void CollorChar(string letter, ConsoleColor color)
         {
-            var originalColor = Console.BackgroundColor;
-            Console.BackgroundColor = color;
-            Console.Write(" {0} ", letter);
-            Console.BackgroundColor = originalColor;
+            var originalColor = _consoleUtility.ConsoleColorActual();
+            _consoleUtility.SetCollor(color);
+            _consoleWriter.PrintMessage($" {letter} ");
+            _consoleUtility.SetCollor(originalColor);
         }
 
         private void Move()
         {
-            Console.WriteLine();
-            Console.Write("X: ");
-            while (!int.TryParse(Console.ReadLine(), out x) || x <= 0 || x > area.field.GetLength(0))
+            string invalidCoordinates = "invalid coordinates";
+            _consoleWriter.PrintNewLine();
+            _consoleWriter.PrintMessage("X: ");
+            while (!int.TryParse(_consoleReader.ReadCoordinate(), out x) || x <= 0 || x > areaWidth)
             {
-                Console.WriteLine("invalid coordinates");
+                _consoleWriter.PrintMessageLine(invalidCoordinates);
             }
-            Console.Write("Y: ");
-            while (!int.TryParse(Console.ReadLine(), out y) || y <= 0 || y > area.field.GetLength(1))
+            _consoleWriter.PrintMessage("Y: ");
+            while (!int.TryParse(_consoleReader.ReadCoordinate(), out y) || y <= 0 || y > areaHeight)
             {
-                Console.WriteLine("invalid coordinates");
+                _consoleWriter.PrintMessageLine(invalidCoordinates);
             }
-            if (unCovered[y - 1, x - 1])
+            if (unCoveredField[y - 1, x - 1])
             {
-                Console.WriteLine("This cell is already uncovered");
+                _consoleWriter.PrintMessageLine("This cell is already uncovered");
                 Move();
             }
             else
@@ -117,12 +134,12 @@ namespace MineSweeper
             }
 
         }
-        void UnCover(int xx, int yy)
+        private void UnCover(int xx, int yy)
         {
-            if (xx >= 0 && xx < area.field.GetLength(0)
-                   && yy >= 0 && yy < area.field.GetLength(1) && !unCovered[xx, yy])
+            if (xx >= 0 && xx < areaWidth
+                   && yy >= 0 && yy < areaHeight && !unCoveredField[xx, yy])
             {
-                unCovered[xx, yy] = true;
+                unCoveredField[xx, yy] = true;
                 if (area[xx, yy] == 0)
                 {
                     for (int i = -1; i <= 1; i++)
@@ -131,15 +148,15 @@ namespace MineSweeper
                 }
             }
         }
-        void EndGame()
+        private void EndGame()
         {
             switch (status)
             {
                 case GameStatus.Lose:
-                    Console.WriteLine("You lose!");
+                    _consoleWriter.PrintMessageLine("You lose!");
                     break;
                 case GameStatus.Win:
-                    Console.WriteLine("You win!");
+                    _consoleWriter.PrintMessageLine("You win!");
                     break;
             }
         }

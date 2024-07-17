@@ -1,10 +1,22 @@
 ﻿using MineSweeper;
+using MineSweeper.ConsoleInteractor.Interface;
+using MineSweeper.ConsoleInteractor;
 
-Game game = CreateGame();
+
+IConsoleUtility consoleUtility = new ConsoleUtility();
+IConsoleReader consoleReader = new ConsoleReader();
+IConsoleWriter consoleWriter = new ConsoleWriter();
+
+Game game = CreateGame(consoleUtility, consoleReader, consoleWriter);
 game.Start();
 Console.Read();
 
-Game CreateGame()
+
+
+
+
+
+Game CreateGame(IConsoleUtility consoleUtility, IConsoleReader consoleReader, IConsoleWriter consoleWriter)
 {
     string sizeText = "what size will the field be?: ";
     string minesText = "number of mines?: ";
@@ -21,5 +33,5 @@ Game CreateGame()
         Console.Clear();
         Console.Write(minesText);
     }
-      return new Game(size, mines);
+    return new Game(size, mines, consoleUtility, consoleReader, consoleWriter);
 }
